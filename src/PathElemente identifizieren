@@ -1,0 +1,25 @@
+private void clearSmallPolygons(Path... paths){
+    validPaths = new ArrayList<>();
+    Point2D p0 = Point2D.ZERO;
+    for (Path path : paths) {
+        for (PathElement elem : path.getElements()) {
+            if (elem instanceof MoveTo) {
+                elements = new ArrayList<>();
+                elements.add(elem);
+                listPoints = new ArrayList<>();
+                p0 = new Point2D(((MoveTo)elem).getX(), ((MoveTo)elem).getY());
+                listPoints.add(p0);
+            } else if (elem instanceof CubicCurveTo) {
+                elements.add(elem);
+                Point2D ini = listPoints.size() > 0 ? listPoints.get(listPoints.size() - 1) : p0;
+                listPoints.addAll(evalCubicCurve((CubicCurveTo) elem, ini, POINTS_CURVE));
+            } else if (elem instanceof ClosePath) {
+                elements.add(elem);
+                listPoints.add(p0);
+                if (Math.abs(calculateArea()) > MINIMUM_AREA) {
+                    validPaths.add(new Path(elements));
+                }
+            } 
+        }
+    }
+}
