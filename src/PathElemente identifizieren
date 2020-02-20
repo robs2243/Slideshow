@@ -23,3 +23,113 @@ private void clearSmallPolygons(Path... paths){
         }
     }
 }
+
+
+Arbeiten mit Masken ggf eine Lösung für das Speichern/Löschen Problem 
+
+https://stackoverflow.com/questions/28845843/override-path-with-transparent-color-in-javafx-canvas-graphicscontext
+
+public class ManualBlendWithMask extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+
+        Group root = new Group();
+
+        // create canvas
+        Canvas canvas = new Canvas(200, 200);
+        canvas.setTranslateX(100);
+        canvas.setTranslateY(100);
+
+        // create canvas with blue rectangle
+        GraphicsContext canvasGC = canvas.getGraphicsContext2D();
+        canvasGC.setFill(Color.BLUE);
+        canvasGC.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        // create mask
+        Canvas mask = new Canvas( canvas.getWidth(), canvas.getHeight());
+        GraphicsContext maskGC = mask.getGraphicsContext2D();
+        maskGC.setFill(Color.WHITE);
+        maskGC.fillRect(0, 0, mask.getWidth(), mask.getHeight());
+
+        // draw path
+        maskGC.setStroke(Color.BLACK);
+        maskGC.setLineWidth(20);
+        maskGC.beginPath();
+        maskGC.moveTo(0, 0);
+        maskGC.lineTo(400, 400);
+        maskGC.stroke();
+
+        // get image from canvas
+        WritableImage srcImage = new WritableImage((int) canvas.getWidth(), (int) canvas.getHeight());
+        srcImage = canvas.snapshot(null, srcImage);
+
+        // get image from mask
+        WritableImage srcMask = new WritableImage((int) mask.getWidth(), (int) mask.getHeight());
+        srcMask = mask.snapshot(null, srcMask);
+
+        PixelReader maskReader = srcMask.getPixelReader();
+        PixelReader imageReader = srcImage.getPixelReader();
+
+        int width = (int) srcMask.getWidth();
+        int height = (int) srcMask.getHeight();
+
+        // create dest image
+        WritableImage dest = new WritableImage(width, height);
+        PixelWriter writer = dest.getPixelWriter();
+
+        // blend image and mask
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+
+                Color maskColor = maskReader.getColor(x, y);
+                Color imageColor = imageReader.getColor(x, y);
+
+                if (maskColor.equals(Color.WHITE)) {
+                    writer.setColor(x, y, imageColor);
+                }
+
+            }
+        }
+
+        // clear canvas and fill it with the blended image
+        canvasGC = canvas.getGraphicsContext2D();
+        canvasGC.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        canvasGC.drawImage(dest, 0, 0);
+
+        // draw background with gradient
+        Rectangle rect = new Rectangle(400, 400);
+        rect.setFill(new LinearGradient(0, 0, 1, 1, true, CycleMethod.REFLECT, new Stop(0, Color.RED), new Stop(1, Color.YELLOW)));
+
+        // show nodes
+        root.getChildren().addAll(rect, canvas);
+
+        primaryStage.setScene(new Scene(root, 400, 400));
+        primaryStage.show();
+
+    }
+
+}
+
+
+Interessante ClearPath Methode und ggf. arbeiten mit SVGPath...
+
+private void clearPath(GraphicsContext gc, SVGPath path) {
+    int xstart = (int) path.getLayoutX();
+    int xend = (int) (xstart + path.getLayoutBounds().getMaxX());
+    int ystart = (int) path.getLayoutY();
+    int yend = (int) (ystart + path.getLayoutBounds().getMaxY());
+
+    PixelWriter pw = gc.getPixelWriter();
+    for (int x = xstart; x <= xend; x++) {
+        for (int y = ystart; y <= yend; y++) {
+            if(path.contains(new Point2D(x, y))) {
+                pw.setColor(x, y, Color.TRANSPARENT);
+            }
+        }
+    }
+}
